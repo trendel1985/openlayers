@@ -4,8 +4,11 @@
   </div>
   <select v-model="mode">
     <option value="modify">select a feature to modify</option>
-    <option value="draw">draw new features</option>
-
+    <option value="newPoly">draw new Poly</option>
+    <option value="newPoint">draw new Point</option>
+    <option value="newCircle">draw new Circle</option>
+    <option value="newLine">draw new Line</option>
+    <option value="newNew">draw new New</option>
   </select>
   <button @click="saveZones()">Сохранить</button>
 </template>
@@ -16,7 +19,7 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import {Draw, Modify, Select, Snap} from 'ol/interaction';
 import {Map, View} from 'ol/index';
-import {fromLonLat} from 'ol/proj';
+import {fromLonLat,toLonLat} from 'ol/proj';
 import TileLayer from 'ol/layer/Tile'
 import OSM from 'ol/source/OSM'
 //useGeographic();
@@ -30,10 +33,13 @@ export default {
       olMap:'',
       mode:'modify',
       select:'',
-      //delete:'',
+      point:'',
+      circle:'',
       source:'',
       modify:'',
-      draw:'',
+      polygon:'',
+      line:'',
+      newnew:'',
       snap:''
     }
   },
@@ -46,8 +52,26 @@ export default {
     this.modify=new Modify({
       features: this.select.getFeatures(),
     })
-    this.draw=new Draw({
+    this.polygon=new Draw({
       type: 'Polygon',
+      geometryName:'poly',
+      source: this.source,
+    })
+    this.line=new Draw({
+      type: 'LineString',
+      geometryName:'line',
+      source: this.source,
+    })
+    this.circle=new Draw({
+      type: 'Circle',
+      source: this.source,
+    })
+    this.point=new Draw({
+      type: 'Point',
+      source: this.source,
+    })
+    this.newnew=new Draw({
+      type: 'MultiPoint',
       source: this.source,
     })
     this.snap=new Snap({
@@ -75,14 +99,18 @@ export default {
     removeInteractions() {
       this.olMap.removeInteraction(this.modify);
       this.olMap.removeInteraction(this.select);
-      this.olMap.removeInteraction(this.draw);
+      this.olMap.removeInteraction(this.polygon);
+      this.olMap.removeInteraction(this.point);
+      this.olMap.removeInteraction(this.line);
+      this.olMap.removeInteraction(this.newnew)
+      this.olMap.removeInteraction(this.circle);
       this.olMap.removeInteraction(this.select);
 },
     onChange() {
       this.removeInteractions();
       switch (this.mode) {
-        case 'draw': {
-          this.olMap.addInteraction(this.draw);
+        case 'newPoly': {
+          this.olMap.addInteraction(this.polygon);
           this.olMap.addInteraction(this.snap);
           break;
         }
@@ -92,9 +120,23 @@ export default {
           this.olMap.addInteraction(this.snap);
           break;
         }
-        case 'delete': {
-          this.olMap.addInteraction(this.select);
-          this.olMap.addInteraction(this.modify);
+        case 'newPoint': {
+          this.olMap.addInteraction(this.point);
+          this.olMap.addInteraction(this.snap);
+          break;
+        }
+        case 'newCircle': {
+          this.olMap.addInteraction(this.circle);
+          this.olMap.addInteraction(this.snap);
+          break;
+        }
+        case 'newLine': {
+          this.olMap.addInteraction(this.line);
+          this.olMap.addInteraction(this.snap);
+          break;
+        }
+        case 'newNew': {
+          this.olMap.addInteraction(this.newnew);
           this.olMap.addInteraction(this.snap);
           break;
         }
@@ -104,7 +146,18 @@ export default {
       }
     },
     saveZones(){
-      console.log(this.source)
+      const fet=this.source.getFeatures()
+      fet.forEach((item) => {
+        console.log(item)
+        console.log(item.getGeometry())
+        const name=item.getGeometryName()
+        console.log('Name:'+name)
+        const coords=item.values_[name].getCoordinates()
+        console.log(coords)
+        coords.forEach(function (it){
+          console.log(toLonLat(it))
+        })
+      })
     }
   },
   watch: {
