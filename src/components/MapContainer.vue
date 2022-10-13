@@ -1,16 +1,52 @@
 <template>
-  <div ref="map"
-       style="width: 100%; height: 100%">
+  <div style="display: flex;flex-direction: column;width: 70vw;height: 95vh">
+    <div style="width: 100%; height: 100%">
+      <div ref="map" style="width: 100%; height: 100%"></div>
+    </div>
   </div>
-  <select v-model="mode">
-    <option value="modify">select a feature to modify</option>
-    <option value="newPoly">draw new Poly</option>
-    <option value="newPoint">draw new Point</option>
-    <option value="newCircle">draw new Circle</option>
-    <option value="newLine">draw new Line</option>
-    <option value="newNew">draw new New</option>
-  </select>
-  <button @click="saveZones()">Сохранить</button>
+  <div style="display: flex;flex-direction: column;width: 30vw;height: 95vh">
+    <button @click="removeInteractions()">consoleLog</button>
+    <table>
+      <tbody>
+      <template v-if="load && !source.isEmpty()">
+        <template v-for="(item,index) in source.getFeatures()" v-bind:key="item.getGeometryName()+String(index)">
+          <tr>
+            <td>{{ item.values_.name }}</td>
+            <td>{{ item.getGeometry().getType() }}</td>
+            <td>
+              <button @click="source.removeFeature(item)">Удалить</button>
+            </td>
+          </tr>
+        </template>
+        <tr>
+          <td>
+            <button @click="modifyGeo(item)">Изменить</button>
+          </td>
+          <td>
+            <button @click="delSelected()">Удалить выбранное</button>
+          </td>
+        </tr>
+      </template>
+      <tr>
+        <td><select v-model="newGeo.mode">
+          <option value="newPoly">Многоугольник</option>
+          <option value="newPoint">Точка</option>
+          <option value="newCircle">Круг</option>
+          <option value="newLine">Ломаная</option>
+        </select></td>
+        <td><input v-model="newGeo.name" minlength="6" type="text"></td>
+        <button @click="onChange('newPoly')"><i class="icofont-polygonal"></i></button>
+        <button @click="onChange('newPoint')"><i class="icofont-ui-pointer"></i></button>
+        <button @click="onChange('newCircle')"><i class="icofont-circle-ruler"></i></button>
+        <button @click="onChange('newLine')"><i class="icofont-line-messenger"></i></button>
+
+        <button @click="onChange(newGeo.mode)">Добавить</button>
+      </tr>
+      <button @click="saveNewFeache()">Сохранить</button>
+      <button @click="saveZones()">Сохранить Зоны в объект</button>
+      </tbody>
+    </table>
+  </div>
 </template>
 
 <script>
@@ -19,125 +55,179 @@ import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import {Draw, Modify, Select, Snap} from 'ol/interaction';
 import {Map, View} from 'ol/index';
-import {fromLonLat,toLonLat} from 'ol/proj';
+import {fromLonLat, toLonLat} from 'ol/proj';
 import TileLayer from 'ol/layer/Tile'
 import OSM from 'ol/source/OSM'
-//useGeographic();
-
+import {Feature} from "ol";
+import {Circle, Point, Polygon} from 'ol/geom';
+//import {click,doubleClick,focus} from 'ol/events/condition'
 export default {
   name: 'MapContainer',
   components: {},
   props: {},
-  data(){
-    return{
-      olMap:'',
-      mode:'modify',
-      select:'',
-      point:'',
-      circle:'',
-      source:'',
-      modify:'',
-      polygon:'',
-      line:'',
-      newnew:'',
-      snap:''
+  data() {
+    return {
+      olMap: '',
+      mode: 'modify',
+      select: new Select(),
+      point: '',
+      circle: '',
+      source: new VectorSource({
+        format: new GeoJSON()
+      }),
+      newSource: new VectorSource({
+        format: new GeoJSON()
+      }),
+      polygon: '',
+      line: '',
+      snap: '',
+      load: false,
+      newGeo: {
+        mode: 'newPoint',
+        name: 'Название',
+        interactions: [],
+      },
+      geoFances:
+          [
+        {
+        "type": "Polygon",
+        "name": "Тестовый полигон",
+        "coords": [[37.76877651290139, 55.33576607696992], [37.62399203825214, 55.33490679709547], [37.46469028043964, 55.345840666467495], [37.22848422575214, 55.39422582045404], [36.97902412185101, 55.52357023527688], [37.01060981521039, 55.61053992998541], [36.974512764622254, 55.65862985526195], [36.89250678786664, 55.67176886555495], [36.87078109560214, 55.72005914381316], [36.943565519430265, 55.92449609210101], [37.025962980367765, 56.019021002474545], [37.31028755736935, 56.12418181060548], [37.41328438354123, 56.19071965395298], [37.569122815443684, 56.191037114132286], [37.953644299818684, 56.104592741265066], [38.19291391816968, 56.03772859595611], [38.47031870332593, 55.91555332928732], [38.529370216997805, 55.93478884983281], [38.57194223848218, 55.77136862861968], [38.51563730684156, 55.75591613596981], [38.47496909676087, 55.70850225352774], [38.36098594246399, 55.652754913320024], [38.392571635823366, 55.572090633751856], [38.39911708907326, 55.49634237976724], [38.33319912032326, 55.45587013403659], [38.34693203047951, 55.38884402740942], [38.29062709883889, 55.35372687926164], [38.16428432540139, 55.352165393681474], [38.07502040938576, 55.34591883555066], [37.98712978438576, 55.334984987757224], [37.93357143477638, 55.36075280235693], [37.85666713790139, 55.34201423634735]]
+      }, {
+        "type": "Point",
+        "name": "Тестовая Точка",
+        "coords": [37.02249057340839, 55.41880832762814]
+      }, {
+        "type": "Circle",
+        "name": "Тестовый Круг",
+        "coords": {"center": [37.10797793913105, 55.31686222357598], "radius": 13328.929861847311}
+      }],
     }
   },
   mounted(){
-    this.select=new Select()
-    //this.delete=new Delete()
-    this.source=new VectorSource({
-      format: new GeoJSON(),
-    })
-    this.modify=new Modify({
-      features: this.select.getFeatures(),
-    })
-    this.polygon=new Draw({
-      type: 'Polygon',
-      geometryName:'poly',
-      source: this.source,
-    })
-    this.line=new Draw({
-      type: 'LineString',
-      geometryName:'line',
-      source: this.source,
-    })
-    this.circle=new Draw({
-      type: 'Circle',
-      source: this.source,
-    })
-    this.point=new Draw({
-      type: 'Point',
-      source: this.source,
-    })
-    this.newnew=new Draw({
-      type: 'MultiPoint',
-      source: this.source,
-    })
-    this.snap=new Snap({
-      source: this.source,
-    })
-    this.olMap=new Map({
-      target: this.$refs['map'],
-      layers: [
-        new TileLayer({
-          source: new OSM(),
-        }),
-        new VectorLayer({
-          source: this.source,
-        }),
-      ],
-      view: new View({
-        zoom: 12,
-        center: fromLonLat([37.55213985518653, 55.7449717807913]),
-        constrainResolution: true,
-        projection:'EPSG:3857'
-      })
-    })
+    this.init()
     },
-  methods:{
+  methods: {
+    init() {
+      this.snap=new Snap({
+        source: this.source,
+      })
+      this.point = {
+        type: 'Point',
+        source: this.newSource,
+      }
+      this.polygon = {
+        type: 'Polygon',
+        source: this.newSource
+      }
+      this.circle = {
+        type: 'Circle',
+        source: this.newSource,
+      }
+      this.line = {
+        type: 'LineString',
+        source: this.newSource,
+      }
+      this.olMap = new Map({
+        target: this.$refs['map'],
+        layers: [
+          new TileLayer({
+            source: new OSM(),
+          }),
+          new VectorLayer({
+            source: this.source,
+            style: {
+              'fill-color': 'rgba(100, 255, 255, 0.5)',
+              'stroke-color': '#335cff',
+              'stroke-width': 2,
+              'circle-radius': 7,
+              'circle-fill-color': '#facc34',
+            },
+          }),
+          new VectorLayer({
+            source: this.newSource,
+            style: {
+              'fill-color': 'rgba(100, 255, 255, 0.5)',
+              'stroke-color': '#ff3333',
+              'stroke-width': 2,
+              'circle-radius': 7,
+              'circle-fill-color': '#facc34',
+            },
+          }),
+        ],
+        view: new View({
+          zoom: 9,
+          center: fromLonLat([37.55213985518653, 55.7449717807913]),
+          constrainResolution: true,
+          projection: 'EPSG:3857'
+        })
+      })
+      this.renderData()
+      this.load = true
+    },
+    delSelected() {
+      const ft = this.select.getFeatures().getArray()
+      console.log(ft)
+      console.log('length:' + ft.length)
+      for (let i = 0; i < ft.length; i++) {
+        console.log(ft[i])
+        this.source.removeFeature(ft[i])
+      }
+    },
     removeInteractions() {
-      this.olMap.removeInteraction(this.modify);
-      this.olMap.removeInteraction(this.select);
-      this.olMap.removeInteraction(this.polygon);
-      this.olMap.removeInteraction(this.point);
-      this.olMap.removeInteraction(this.line);
-      this.olMap.removeInteraction(this.newnew)
-      this.olMap.removeInteraction(this.circle);
-      this.olMap.removeInteraction(this.select);
-},
-    onChange() {
-      this.removeInteractions();
-      switch (this.mode) {
+      for (let i = 0; i <= this.newGeo.interactions.length; i++) {
+        this.olMap.removeInteraction(this.newGeo.interactions[i])
+      }
+      this.newGeo.interactions.splice(0, this.newGeo.interactions.length)
+      console.log(this.newGeo.interactions)
+    },
+    consoleLog(item) {
+      item.forEachFeature(function (feature) {
+        console.log(feature.values_.name)
+        console.log(feature.getGeometry().getCoordinates())
+      })
+
+    },
+    onChange(name) {
+      this.removeInteractions()
+      switch (name) {
         case 'newPoly': {
-          this.olMap.addInteraction(this.polygon);
-          this.olMap.addInteraction(this.snap);
-          break;
-        }
-        case 'modify': {
-          this.olMap.addInteraction(this.select);
-          this.olMap.addInteraction(this.modify);
-          this.olMap.addInteraction(this.snap);
+          this.polygon.geometryName = this.newGeo.name
+          this.newGeo.interactions.push(new Draw(this.polygon))
+          this.newGeo.interactions.push(this.snap)
+          this.newGeo.interactions.push(new Modify({
+            source: this.newSource,
+          }))
+          for (let i = 0; i < this.newGeo.interactions.length; i++) {
+            this.olMap.addInteraction(this.newGeo.interactions[i]);
+          }
           break;
         }
         case 'newPoint': {
-          this.olMap.addInteraction(this.point);
-          this.olMap.addInteraction(this.snap);
+          this.point.geometryName = this.newGeo.name
+          this.newGeo.interactions.push(new Draw(this.point));
+          this.newGeo.interactions.push(this.snap);
+          for (let i = 0; i < this.newGeo.interactions.length; i++) {
+            this.olMap.addInteraction(this.newGeo.interactions[i]);
+          }
           break;
         }
         case 'newCircle': {
-          this.olMap.addInteraction(this.circle);
-          this.olMap.addInteraction(this.snap);
+          this.circle.geometryName = this.newGeo.name
+          this.newGeo.interactions.push(new Draw(this.circle));
+          this.newGeo.interactions.push(this.snap);
+          for (let i = 0; i < this.newGeo.interactions.length; i++) {
+            this.olMap.addInteraction(this.newGeo.interactions[i]);
+          }
           break;
         }
         case 'newLine': {
-          this.olMap.addInteraction(this.line);
-          this.olMap.addInteraction(this.snap);
-          break;
-        }
-        case 'newNew': {
-          this.olMap.addInteraction(this.newnew);
-          this.olMap.addInteraction(this.snap);
+          this.line.geometryName = this.newGeo.name
+          this.newGeo.interactions.push(new Draw(this.line));
+          this.newGeo.interactions.push(this.snap);
+          for (let i = 0; i < this.newGeo.interactions.length; i++) {
+            this.olMap.addInteraction(this.newGeo.interactions[i]);
+          }
           break;
         }
         default: {
@@ -145,26 +235,104 @@ export default {
         }
       }
     },
-    saveZones(){
-      const fet=this.source.getFeatures()
-      fet.forEach((item) => {
-        console.log(item)
-        console.log(item.getGeometry())
-        const name=item.getGeometryName()
-        console.log('Name:'+name)
-        const coords=item.values_[name].getCoordinates()
-        console.log(coords)
-        coords.forEach(function (it){
-          console.log(toLonLat(it))
+    modifyGeo() {
+      this.removeInteractions()
+      this.newGeo.interactions.push(this.select);
+      this.newGeo.interactions.push(new Modify({
+        features: this.select.getFeatures(),
+      }));
+      this.newGeo.interactions.push(this.snap);
+      for (let i = 0; i < this.newGeo.interactions.length; i++) {
+        this.olMap.addInteraction(this.newGeo.interactions[i]);
+      }
+    },
+    saveNewFeache() {
+      let fts = this.newSource.getFeatures()
+      for (let i = 0; i < fts.length; i++) {
+        console.log(fts[i])
+        const feathe = new Feature({
+          geometry: fts[i].getGeometry(),
+          name: fts[i].getGeometryName(),
         })
+        this.source.addFeature(feathe)
+        this.newSource.removeFeature(fts[i])
+      }
+
+    },
+    renderData() {
+      for (let i = 0; i < this.geoFances.length; i++) {
+        if (this.geoFances[i].type === 'Polygon') {
+          let coords = [[]]
+          this.geoFances[i].coords.forEach(function (co) {
+            coords[0].push(fromLonLat(co))
+          })
+          const ft = new Feature({
+            geometry: new Polygon(coords),
+            name: this.geoFances[i].name,
+          })
+          this.source.addFeature(ft)
+        }
+        if (this.geoFances[i].type === 'Point') {
+          const coords = fromLonLat(this.geoFances[i].coords)
+          const ft = new Feature({
+            geometry: new Point(coords),
+            name: this.geoFances[i].name,
+          })
+          this.source.addFeature(ft)
+        }
+        if (this.geoFances[i].type === 'Circle') {
+          const center = fromLonLat(this.geoFances[i].coords.center)
+          let c = new Circle(center)
+          c.setCenter(center)
+          c.setRadius(this.geoFances[i].coords.radius)
+          const ft = new Feature({
+            geometry: c,
+            name: this.geoFances[i].name,
+          })
+          this.source.addFeature(ft)
+        }
+      }
+    },
+    saveZones() {
+      let fts = []
+      this.source.forEachFeature(function (ft) {
+        const type = ft.getGeometry().getType()
+        if (type == 'Polygon') {
+          const ftcoords = ft.getGeometry().getCoordinates()[0]
+          const wgs84coords = []
+          ftcoords.forEach(function (coo) {
+            wgs84coords.push(toLonLat(coo))
+          })
+          fts.push({
+            type: type,
+            name: ft.values_.name,
+            coords: wgs84coords
+          })
+        }
+        if (type == 'Point') {
+          const ftcoords = ft.getGeometry().getCoordinates()
+          const wgs84coords = toLonLat(ftcoords)
+          fts.push({
+            type: type,
+            name: ft.values_.name,
+            coords: wgs84coords
+          })
+        }
+        if (type == 'Circle') {
+          const center = toLonLat(ft.getGeometry().getCenter())
+          const radius = ft.getGeometry().getRadius()
+          fts.push({
+            type: type,
+            name: ft.values_.name,
+            coords: {
+              center: center,
+              radius: radius
+            }
+          })
+        }
       })
+      console.log(JSON.stringify(fts))
     }
   },
-  watch: {
-    'mode':function (newval){
-      console.log(newval)
-      this.onChange()
-    }
-  }
 }
 </script>
