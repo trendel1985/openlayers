@@ -27,25 +27,17 @@
           </td>
         </tr>
       </template>
-      <tr>
-        <td><select v-model="newGeo.mode">
-          <option value="newPoly">Многоугольник</option>
-          <option value="newPoint">Точка</option>
-          <option value="newCircle">Круг</option>
-          <option value="newLine">Ломаная</option>
-        </select></td>
-        <td><input v-model="newGeo.name" minlength="6" type="text"></td>
-        <button @click="onChange('newPoly')"><i class="icofont-polygonal"></i></button>
-        <button @click="onChange('newPoint')"><i class="icofont-ui-pointer"></i></button>
-        <button @click="onChange('newCircle')"><i class="icofont-circle-ruler"></i></button>
-        <button @click="onChange('newLine')"><i class="icofont-line-messenger"></i></button>
-
-        <button @click="onChange(newGeo.mode)">Добавить</button>
-      </tr>
-      <button @click="saveNewFeache()">Сохранить</button>
-      <button @click="saveZones()">Сохранить Зоны в объект</button>
       </tbody>
     </table>
+    <div>
+      <button @click="onChange('newPoly')"><i class="icofont-polygonal"></i></button>
+      <button @click="onChange('newPoint')"><i class="icofont-ui-pointer"></i></button>
+      <button @click="onChange('newCircle')"><i class="icofont-circle-ruler"></i></button>
+      <button @click="onChange('newLine')"><i class="icofont-line-messenger"></i></button>
+      <input v-model="newGeo.name" minlength="6" type="text">
+    </div>
+    <button @click="saveNewFeache()">Сохранить созданные зоны</button>
+    <button @click="saveZones()">Сохранить Зоны в объект</button>
   </div>
 </template>
 
@@ -59,7 +51,7 @@ import {fromLonLat, toLonLat} from 'ol/proj';
 import TileLayer from 'ol/layer/Tile'
 import OSM from 'ol/source/OSM'
 import {Feature} from "ol";
-import {Circle, Point, Polygon} from 'ol/geom';
+import {Circle, LineString, Point, Polygon} from 'ol/geom';
 //import {click,doubleClick,focus} from 'ol/events/condition'
 export default {
   name: 'MapContainer',
@@ -88,20 +80,23 @@ export default {
         interactions: [],
       },
       geoFances:
-          [
-        {
-        "type": "Polygon",
-        "name": "Тестовый полигон",
-        "coords": [[37.76877651290139, 55.33576607696992], [37.62399203825214, 55.33490679709547], [37.46469028043964, 55.345840666467495], [37.22848422575214, 55.39422582045404], [36.97902412185101, 55.52357023527688], [37.01060981521039, 55.61053992998541], [36.974512764622254, 55.65862985526195], [36.89250678786664, 55.67176886555495], [36.87078109560214, 55.72005914381316], [36.943565519430265, 55.92449609210101], [37.025962980367765, 56.019021002474545], [37.31028755736935, 56.12418181060548], [37.41328438354123, 56.19071965395298], [37.569122815443684, 56.191037114132286], [37.953644299818684, 56.104592741265066], [38.19291391816968, 56.03772859595611], [38.47031870332593, 55.91555332928732], [38.529370216997805, 55.93478884983281], [38.57194223848218, 55.77136862861968], [38.51563730684156, 55.75591613596981], [38.47496909676087, 55.70850225352774], [38.36098594246399, 55.652754913320024], [38.392571635823366, 55.572090633751856], [38.39911708907326, 55.49634237976724], [38.33319912032326, 55.45587013403659], [38.34693203047951, 55.38884402740942], [38.29062709883889, 55.35372687926164], [38.16428432540139, 55.352165393681474], [38.07502040938576, 55.34591883555066], [37.98712978438576, 55.334984987757224], [37.93357143477638, 55.36075280235693], [37.85666713790139, 55.34201423634735]]
-      }, {
-        "type": "Point",
-        "name": "Тестовая Точка",
-        "coords": [37.02249057340839, 55.41880832762814]
-      }, {
-        "type": "Circle",
-        "name": "Тестовый Круг",
-        "coords": {"center": [37.10797793913105, 55.31686222357598], "radius": 13328.929861847311}
-      }],
+          [{
+            "type": "Polygon",
+            "name": "Тестовый полигон",
+            "coords": [[37.76877651290139, 55.33576607696992], [37.62399203825214, 55.33490679709547], [37.46469028043964, 55.345840666467495], [37.22848422575214, 55.39422582045404], [36.97902412185101, 55.52357023527688], [37.01060981521039, 55.61053992998541], [36.974512764622254, 55.65862985526195], [36.89250678786664, 55.67176886555495], [36.87078109560214, 55.72005914381316], [36.943565519430265, 55.92449609210101], [37.025962980367765, 56.019021002474545], [37.31028755736935, 56.12418181060548], [37.41328438354123, 56.190719653952954], [37.569122815443684, 56.191037114132286], [37.953644299818684, 56.104592741265066], [38.19291391816968, 56.03772859595614], [38.47031870332593, 55.91555332928732], [38.529370216997805, 55.93478884983281], [38.57194223848218, 55.77136862861968], [38.51563730684156, 55.75591613596981], [38.47496909676087, 55.70850225352774], [38.36098594246399, 55.652754913320024], [38.392571635823366, 55.572090633751856], [38.39911708907325, 55.49634237976724], [38.33319912032326, 55.45587013403659], [38.34693203047951, 55.38884402740942], [38.29062709883889, 55.35372687926164], [38.16428432540139, 55.352165393681474], [38.07502040938576, 55.34591883555066], [37.98712978438576, 55.334984987757224], [37.93357143477638, 55.36075280235693], [37.85666713790139, 55.34201423634735]]
+          }, {
+            "type": "Point",
+            "name": "Тестовая Точка",
+            "coords": [37.02249057340839, 55.41880832762814]
+          }, {
+            "type": "Circle",
+            "name": "Тестовый Круг",
+            "coords": {"center": [37.10797793913105, 55.31686222357598], "radius": 13328.929861847311}
+          }, {
+            "type": "LineString",
+            "name": "Название",
+            "coords": [[38.573868370811525, 56.02686344586249], [37.837784386436525, 56.20449024974522], [37.074234581749025, 56.180038736035215], [36.65950069503028, 55.96234795508971], [36.651260948936525, 55.60248138139434], [37.57136592940528, 55.22205355834788], [38.68098507003028, 55.31750408951942], [38.74415645674903, 55.71249250026656]]
+          }],
     }
   },
   mounted(){
@@ -291,6 +286,17 @@ export default {
           })
           this.source.addFeature(ft)
         }
+        if (this.geoFances[i].type === 'LineString') {
+          let coords = []
+          this.geoFances[i].coords.forEach(function (co) {
+            coords.push(fromLonLat(co))
+          })
+          const ft = new Feature({
+            geometry: new LineString(coords),
+            name: this.geoFances[i].name,
+          })
+          this.source.addFeature(ft)
+        }
       }
     },
     saveZones() {
@@ -328,6 +334,19 @@ export default {
               center: center,
               radius: radius
             }
+          })
+        }
+        if (type == 'LineString') {
+          const coords = ft.getGeometry().getCoordinates()
+          console.log(coords)
+          const wgs84coords = []
+          coords.forEach(function (coo) {
+            wgs84coords.push(toLonLat(coo))
+          })
+          fts.push({
+            type: type,
+            name: ft.values_.name,
+            coords: wgs84coords
           })
         }
       })
