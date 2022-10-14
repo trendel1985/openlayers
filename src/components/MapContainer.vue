@@ -1,11 +1,36 @@
 <template>
   <div style="display: flex;flex-direction: column;width: 70vw;height: 95vh">
     <div style="width: 100%; height: 100%">
-      <div ref="map" style="width: 100%; height: 100%"></div>
+      <div ref="map" style="width: 100%; height: 100%">
+        <div class="attr">
+          <button><i v-if="!newGeo.mode" @click="newGeo.mode=!newGeo.mode" class="icofont-ui-add"></i><i v-else @click="removeInteractions();newGeo.mode=!newGeo.mode" class="icofont-stop"></i></button>
+          <div v-if="newGeo.mode">
+            <button @click="onChange('newPoly')"><i class="icofont-polygonal"></i></button>
+            <button @click="onChange('newPoint')"><i class="icofont-ui-pointer"></i></button>
+            <button @click="onChange('newCircle')"><i class="icofont-circle-ruler"></i></button>
+            <button @click="onChange('newLine')"><i class="icofont-line-messenger"></i></button>
+            <button><i @click="modifyGeo" class="icofont-edit"></i></button>
+            <input v-model="newGeo.name" minlength="6" type="text">
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div style="display: flex;flex-direction: column;width: 30vw;height: 95vh">
-    <button @click="removeInteractions()">consoleLog</button>
+    <button @click="consoleLog(olMap)">Map console</button>
+    <h3>Слои карты</h3>
+    <table>
+      <tbody v-if="load">
+      <template v-for="layer in olMap.getAllLayers()" v-bind:key="layer">
+        <tr>
+          <td>
+            <input @click="olMap.render()" type="checkbox" v-model="layer.values_.visible">{{ layer.values_.visible }}
+          </td>
+        </tr>
+      </template>
+      </tbody>
+    </table>
+    <h3>Геозоны</h3>
     <table>
       <tbody>
       <template v-if="load && !source.isEmpty()">
@@ -25,6 +50,7 @@
           <td>
             <button @click="delSelected()">Удалить выбранное</button>
           </td>
+          <td><button @click="removeInteractions()">Закончить редактирование</button></td>
         </tr>
       </template>
       </tbody>
@@ -50,9 +76,10 @@ import {Map, View} from 'ol/index';
 import {fromLonLat, toLonLat} from 'ol/proj';
 import TileLayer from 'ol/layer/Tile'
 import OSM from 'ol/source/OSM'
-import {Feature} from "ol";
+import {Collection, Feature} from "ol";
 import {Circle, LineString, Point, Polygon} from 'ol/geom';
-//import {click,doubleClick,focus} from 'ol/events/condition'
+import { MousePosition, Zoom} from "ol/control";
+
 export default {
   name: 'MapContainer',
   components: {},
@@ -60,6 +87,18 @@ export default {
   data() {
     return {
       olMap: '',
+      myControl: new Collection([
+        new Zoom({
+          className:'mapZoom'
+        }),
+          new MousePosition({
+            coordinateFormat:function(coordinate) {
+              const c= toLonLat(coordinate);
+              return 'Lon: '+c[0].toFixed(5)+' Lat: '+c[1].toFixed(5)
+            },
+            className:'mousePos'
+          })
+      ]),
       mode: 'modify',
       select: new Select(),
       point: '',
@@ -75,9 +114,10 @@ export default {
       snap: '',
       load: false,
       newGeo: {
-        mode: 'newPoint',
+        mode: false,
         name: 'Название',
         interactions: [],
+
       },
       geoFances:
           [{
@@ -155,7 +195,8 @@ export default {
           center: fromLonLat([37.55213985518653, 55.7449717807913]),
           constrainResolution: true,
           projection: 'EPSG:3857'
-        })
+        }),
+        controls:this.myControl
       })
       this.renderData()
       this.load = true
@@ -177,11 +218,7 @@ export default {
       console.log(this.newGeo.interactions)
     },
     consoleLog(item) {
-      item.forEachFeature(function (feature) {
-        console.log(feature.values_.name)
-        console.log(feature.getGeometry().getCoordinates())
-      })
-
+      console.log(item.getAllLayers())
     },
     onChange(name) {
       this.removeInteractions()
@@ -355,3 +392,33 @@ export default {
   },
 }
 </script>
+<style>
+.mousePos{
+  position: absolute;
+  background: none;
+  height:auto ;
+  width: auto;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  font-weight: bold;
+  font-size: small;
+}
+.mapZoom{
+  position: absolute;
+  background: #DCDCE1;
+  height:auto;
+  width: auto;
+  bottom: 0.5rem;
+  right: 0.5rem;
+}
+.attr{
+  position: absolute;
+  display: inline-flex;
+  background: #DCDCE1;
+  height:auto;
+  width: auto;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 100;
+}
+</style>

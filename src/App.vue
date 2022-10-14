@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <div style="display: inline-flex;flex-wrap: nowrap">
-      <map-container ></map-container>
+      <map-container></map-container>
     </div>
   </div>
 </template>
